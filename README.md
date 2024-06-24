@@ -1,5 +1,29 @@
-Introduction
-This serverless application processes financial transactions, anonymizes personal data, evaluates risk, and stores the results securely. The application is built using AWS Lambda, API Gateway, and TypeScript.
+financial-record/
+|-- src/
+|   |-- handlers/
+|   |   |-- postTransaction.ts
+|   |   |-- anonymizeData.ts
+|   |   |-- encryptData.ts
+|   |   |-- assessRisk.ts
+|   |   |-- enrichData.ts
+|   |   |-- storeResult.ts
+|   |   |-- retrieveResult.ts
+|   |
+|   |-- utils/
+|   |   |-- validateData.ts
+|   |   |-- crypto.ts
+|   |
+|-- tests/
+|   |-- handlers/
+|   |-- utils/
+|-- tsconfig.json
+|-- package.json
+|-- jest.config.js
+
+Accordingly you can go
+ Here is Documentation
+
+ This project involves developing a serverless application to anonymize sensitive financial data, perform risk assessment calculations based on dynamic criteria, and securely store the results. The solution leverages AWS services, TypeScript, and cryptographic functions to ensure data security and integrity.
 
 Architecture
 AWS Lambda: Functions for data processing stages (anonymization, encryption, risk assessment, storage, and retrieval).
@@ -76,28 +100,80 @@ Copy code
 }
 Data Processing
 Anonymization
-Personal identifiers are anonymized by generating consistent pseudonyms across sessions.
+Personal identifiers are anonymized by generating consistent pseudonyms across sessions. This involves:
 
+Hashing the user ID to create a pseudonym.
+Masking email addresses and phone numbers to hide real information while retaining format.
 Encryption and Hashing
-Symmetric Encryption (AES-256)
-Asymmetric Encryption (RSA)
-Important fields are hashed for integrity checks.
-Risk Assessment
-A complex algorithm evaluates the risk associated with each transaction based on factors like amount, frequency, geographical location, and past transaction behavior.
+Symmetric Encryption (AES-256): Used to encrypt sensitive fields.
+Asymmetric Encryption (RSA): Used to encrypt the AES key parts.
+Hashing: Important fields (e.g., transaction IDs) are hashed to maintain integrity.
+Risk Assessment Algorithm
+The risk assessment algorithm evaluates the risk associated with each transaction based on multiple factors. The algorithm uses statistical methods and possibly heuristic approaches for evaluating risk. This involves:
 
+Calculating the mean and standard deviation of transaction amounts.
+Flagging transactions that are significantly higher or lower than average (using Z-scores).
+Considering frequency and geographical location.
 Data Enrichment
-External data sources are integrated to enrich transaction data with additional information, such as currency conversion rates and regional economic indicators.
+External data sources are integrated to enrich transaction data with additional information. This can include:
 
+Currency conversion rates.
+Regional economic indicators.
+Historical transaction data for the user.
 Storage and Retrieval
 Storage
 Processed results are securely stored in an S3 bucket with encryption at rest. For local testing, data can be stored in a JSON file.
 
 Retrieval
-A Lambda function is provided to query results based on encrypted or hashed identifiers.
+A Lambda function is provided to query results based on encrypted or hashed identifiers. This ensures that data retrieval is secure and consistent with the anonymization and encryption protocols.
 
 Testing
 Comprehensive unit tests are developed for each component, particularly focusing on the integrity of the cryptographic functions and the accuracy of the risk assessment algorithm. Testing includes:
 
-Data enrichment integrations
-Anonymization consistency across multiple data points
-
+Validating data enrichment integrations.
+Ensuring anonymization consistency across multiple data points.
+Verifying encryption and decryption processes.
+Detailed Explanations
+Calculations
+Anonymization
+Hashing User ID: hashedUserId = crypto.createHash('sha256').update(userId).digest('hex')
+Masking Email: maskedEmail = email.replace(/(\w{2})[^@]*(?=@)/, "$1***")
+Masking Phone: maskedPhone = phone.replace(/(\d{3})\d*(\d{2})/, "$1*****$2")
+Encryption
+AES Encryption:
+typescript
+Copy code
+const aesKey = crypto.randomBytes(32);
+const iv = crypto.randomBytes(16);
+const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(aesKey), iv);
+let encrypted = cipher.update(data);
+encrypted = Buffer.concat([encrypted, cipher.final()]);
+RSA Encryption:
+typescript
+Copy code
+const rsaKeyPair = crypto.generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: {
+    type: 'pkcs1',
+    format: 'pem'
+  },
+  privateKeyEncoding: {
+    type: 'pkcs1',
+    format: 'pem'
+  }
+});
+const encryptedKey = crypto.publicEncrypt(rsaKeyPair.publicKey, Buffer.from(aesKey));
+Risk Assessment
+Calculating Z-score:
+typescript
+Copy code
+const mean = calculateMean(transactionAmounts);
+const stdDev = calculateStdDev(transactionAmounts);
+const zScore = (transactionAmount - mean) / stdDev;
+if (Math.abs(zScore) > threshold) {
+    // flag as anomaly
+}
+Assumptions
+Transactions are independent events.
+The anonymization must be reversible for pseudonym consistency.
+Risk factors are static and do not change dynamically within the same assessment period.
